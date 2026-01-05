@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+backend/venv/
+backend/__pycache__/
+__pycache__/
+
+# Database
+*.db
+*.sqlite3
+
+# Environment variables
+.env
+.env.local
+
+# Next.js
+frontend/.next/
+frontend/out/
+frontend/build/
+
+# Python
+*.pyc
+.pytest_cache/
+
+# OS
+.DS_Store
+Thumbs.db
