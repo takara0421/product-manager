@@ -1,12 +1,11 @@
 from typing import List
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
-from .database import engine, Base, get_db
-from . import models, schemas, crud
+from . import models, schemas
+# from .database import engine, Base, get_db
+from . import sheets
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Product Manager API")
 
@@ -20,29 +19,29 @@ app.add_middleware(
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to Product Management Queen API"}
+    return {"message": "Welcome to Product Management Queen API (Google Sheets Edition)"}
 
 # Ingredient Endpoints
 @app.post("/ingredients/", response_model=schemas.Ingredient)
-def create_ingredient(ingredient: schemas.IngredientCreate, db: Session = Depends(get_db)):
-    return crud.create_ingredient(db=db, ingredient=ingredient)
+def create_ingredient(ingredient: schemas.IngredientCreate):
+    return sheets.db.create_ingredient(ingredient)
 
 @app.get("/ingredients/", response_model=List[schemas.Ingredient])
-def read_ingredients(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return crud.get_ingredients(db, skip=skip, limit=limit)
+def read_ingredients():
+    return sheets.db.get_ingredients()
 
 # Recipe Endpoints
 @app.post("/recipes/", response_model=schemas.Recipe)
-def create_recipe(recipe: schemas.RecipeCreate, db: Session = Depends(get_db)):
-    return crud.create_recipe(db=db, recipe=recipe)
+def create_recipe(recipe: schemas.RecipeCreate):
+    return sheets.db.create_recipe(recipe)
 
 @app.get("/recipes/", response_model=List[schemas.Recipe])
-def read_recipes(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return crud.get_recipes(db, skip=skip, limit=limit)
+def read_recipes():
+    return sheets.db.get_recipes()
 
 @app.get("/recipes/{recipe_id}", response_model=schemas.Recipe)
-def read_recipe(recipe_id: int, db: Session = Depends(get_db)):
-    db_recipe = crud.get_recipe(db, recipe_id=recipe_id)
-    if db_recipe is None:
+def read_recipe(recipe_id: int):
+    recipe = sheets.db.get_recipe(recipe_id)
+    if recipe is None:
         raise HTTPException(status_code=404, detail="Recipe not found")
-    return db_recipe
+    return recipe
