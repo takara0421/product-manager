@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from . import models, schemas
+from . import schemas
 # from .database import engine, Base, get_db
 from . import sheets
 
