@@ -27,6 +27,7 @@ export default function CreateRecipePage() {
     const router = useRouter();
     const [ingredients, setIngredients] = useState<Ingredient[]>([]);
     const [recipeName, setRecipeName] = useState("");
+    const [sellingPrice, setSellingPrice] = useState("");
     const [items, setItems] = useState<RecipeItemInput[]>([]);
 
     // Modal state
@@ -86,6 +87,7 @@ export default function CreateRecipePage() {
         try {
             await axios.post(`${API_URL}/recipes/`, {
                 name: recipeName,
+                selling_price: parseFloat(sellingPrice || "0"),
                 items: items.map(i => ({
                     ingredient_id: i.ingredient_id,
                     amount: i.amount,
@@ -180,7 +182,7 @@ export default function CreateRecipePage() {
                 </button>
             </div>
 
-            <div style={{ marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
                 <input
                     type="text"
                     className="input-field"
@@ -189,6 +191,18 @@ export default function CreateRecipePage() {
                     value={recipeName}
                     onChange={(e) => setRecipeName(e.target.value)}
                 />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>販売予定価格:</label>
+                    <input
+                        type="number"
+                        className="input-field"
+                        style={{ border: 'none', borderBottom: '1px solid #eee', borderRadius: 0, paddingLeft: 0, width: '100px' }}
+                        placeholder="0"
+                        value={sellingPrice}
+                        onChange={(e) => setSellingPrice(e.target.value)}
+                    />
+                    <span style={{ fontSize: '0.9rem' }}>円</span>
+                </div>
             </div>
 
             {renderSection("dough", "生地 (Dough)")}
@@ -210,8 +224,13 @@ export default function CreateRecipePage() {
                 <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
                     合計 ({items.length}点)
                 </div>
-                <div style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--accent-color)' }}>
-                    ¥{calculateTotal().toFixed(0)}
+                <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        原価率: {(sellingPrice && parseFloat(sellingPrice) > 0) ? ((calculateTotal() / parseFloat(sellingPrice)) * 100).toFixed(1) : '---'}%
+                    </div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--accent-color)' }}>
+                        ¥{calculateTotal().toFixed(0)}
+                    </div>
                 </div>
             </div>
 

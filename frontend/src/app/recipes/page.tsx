@@ -9,6 +9,7 @@ type Recipe = {
     id: number;
     name: string;
     total_cost: number;
+    selling_price: number;
 };
 
 export default function RecipesPage() {
@@ -37,21 +38,24 @@ export default function RecipesPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {recipes.map((recipe) => (
-                    <div key={recipe.id} className="card" style={{ padding: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div key={recipe.id} className="card" style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
-                            <div style={{ fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '0.25rem' }}>{recipe.name}</div>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                                総原価
+                            <div style={{ fontWeight: 'bold', fontSize: '1rem', marginBottom: '0.25rem' }}>{recipe.name}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                販売価格: ¥{recipe.selling_price?.toLocaleString() || '---'}
                             </div>
                         </div>
 
                         <div style={{ textAlign: 'right' }}>
-                            <div style={{ color: 'var(--accent-color)', fontWeight: 'bold', fontSize: '1.25rem' }}>
+                            <div style={{ color: 'var(--accent-color)', fontWeight: 'bold', fontSize: '1.2rem' }}>
                                 ¥{recipe.total_cost.toFixed(0)}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.2rem' }}>
+                                原価率: {recipe.selling_price > 0 ? ((recipe.total_cost / recipe.selling_price) * 100).toFixed(1) : '---'}%
                             </div>
                             <Link
                                 href={`#`}
-                                style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textDecoration: 'underline' }}
+                                style={{ fontSize: '0.7rem', color: '#3b82f6', textDecoration: 'none' }}
                             >
                                 詳細 &rarr;
                             </Link>

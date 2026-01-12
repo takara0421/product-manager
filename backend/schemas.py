@@ -41,6 +41,7 @@ class RecipeItem(RecipeItemBase):
 class RecipeBase(BaseModel):
     name: str
     description: Optional[str] = None
+    selling_price: Optional[float] = 0.0
 
 class RecipeCreate(RecipeBase):
     items: List[RecipeItemCreate] = []
