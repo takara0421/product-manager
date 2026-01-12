@@ -13,6 +13,9 @@ class Ingredient(Base):
     amount = Column(Float)
     # Unit of measure (g, ml, pc)
     unit = Column(String)
+    updated_at = Column(String, nullable=True)
+    tax_type = Column(String, default="inclusive")
+    tax_rate = Column(Float, default=0.08)
     
     # Calculated price per single unit (e.g. per 1g)
     # This might be calculated on the fly, but storing it is easier for queries?

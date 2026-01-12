@@ -63,13 +63,24 @@ class SheetsCRUD:
         self.client = get_db_connection()
         if self.client:
             self.sh = get_spreadsheet(self.client)
-            self.ing_ws = self._get_or_create_worksheet("ingredients", ["id", "name", "price", "amount", "unit"])
             self.recipe_ws = self._get_or_create_worksheet("recipes", ["id", "name", "description"])
+            # Updated to include new columns
+            self.ing_ws = self._get_or_create_worksheet("ingredients", ["id", "name", "price", "amount", "unit", "updated_at", "tax_type", "tax_rate"])
             self.recipe_item_ws = self._get_or_create_worksheet("recipe_items", ["id", "recipe_id", "ingredient_id", "amount", "section"])
 
     def _get_or_create_worksheet(self, title, headers):
         try:
             ws = self.sh.worksheet(title)
+            # Check if headers match and update if necessary - simple check for length for now to act as "migration"
+            current_headers = ws.row_values(1)
+            if len(current_headers) < len(headers):
+                 # Add missing headers if needed
+                 # This is a bit risky but simple for this use case
+                 ws.resize(cols=len(headers))
+                 for i, h in enumerate(headers):
+                     if i >= len(current_headers):
+                         ws.update_cell(1, i+1, h)
+
         except:
             ws = self.sh.add_worksheet(title, 1000, 10)
             ws.append_row(headers)
@@ -89,9 +100,26 @@ class SheetsCRUD:
     def create_ingredient(self, ing: schemas.IngredientCreate):
         if not self.client: raise Exception("DB not connected")
         new_id = self._get_next_id(self.ing_ws)
-        row = [new_id, ing.name, ing.price, ing.amount, ing.unit]
+        row = [new_id, ing.name, ing.price, ing.amount, ing.unit, ing.updated_at, ing.tax_type, ing.tax_rate]
+        self.ing_ws.append_row(row)
         self.ing_ws.append_row(row)
         return schemas.Ingredient(id=new_id, **ing.dict())
+
+    def update_ingredient(self, ingredient_id: int, ing: schemas.IngredientCreate):
+        if not self.client: raise Exception("DB not connected")
+        
+        # Find row by ID (column 1)
+        try:
+            cell = self.ing_ws.find(str(ingredient_id), in_column=1)
+        except gspread.exceptions.CellNotFound:
+            return None
+            
+        row_num = cell.row
+        # Update columns B to H (2 to 8)
+        # name, price, amount, unit, updated_at, tax_type, tax_rate
+        self.ing_ws.update(range_name=f'B{row_num}:H{row_num}', values=[[ing.name, ing.price, ing.amount, ing.unit, ing.updated_at, ing.tax_type, ing.tax_rate]])
+        
+        return schemas.Ingredient(id=ingredient_id, **ing.dict())
 
     # Recipes
     def get_recipes(self):
@@ -116,8 +144,18 @@ class SheetsCRUD:
             for ri in recipe_items:
                 ing_data = ing_map.get(ri['ingredient_id'])
                 if ing_data:
-                    # Calculate cost
-                    unit_cost = float(ing_data['price']) / float(ing_data['amount'])
+                if ing_data:
+                    # Calculate cost with tax logic
+                    raw_price = float(ing_data['price'])
+                    tax_type = ing_data.get('tax_type', 'inclusive')
+                    tax_rate = float(ing_data.get('tax_rate', 0.08))
+
+                    if tax_type == 'exclusive':
+                        price_with_tax = raw_price * (1 + tax_rate)
+                    else:
+                        price_with_tax = raw_price
+
+                    unit_cost = price_with_tax / float(ing_data['amount'])
                     cost = unit_cost * float(ri['amount'])
                     total_cost += cost
                     

@@ -7,6 +7,9 @@ class IngredientBase(BaseModel):
     price: float
     amount: float
     unit: str
+    updated_at: Optional[str] = None
+    tax_type: Optional[str] = "inclusive" # 'inclusive' or 'exclusive'
+    tax_rate: Optional[float] = 0.08
 
 class IngredientCreate(IngredientBase):
     pass
