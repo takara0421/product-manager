@@ -16,6 +16,11 @@ type Ingredient = {
     tax_rate: number;
 };
 
+type IngredientHistory = Ingredient & {
+    ingredient_id: number;
+    changed_at: string;
+};
+
 export default function IngredientsPage() {
     const [ingredients, setIngredients] = useState<Ingredient[]>([]);
     const [formData, setFormData] = useState({
@@ -29,6 +34,8 @@ export default function IngredientsPage() {
     });
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
+    const [history, setHistory] = useState<IngredientHistory[]>([]);
+    const [showHistory, setShowHistory] = useState(false);
 
     useEffect(() => {
         fetchIngredients();
@@ -40,6 +47,15 @@ export default function IngredientsPage() {
             setIngredients(response.data);
         } catch (error) {
             console.error("Error fetching ingredients:", error);
+        }
+    };
+
+    const fetchHistory = async (id: number) => {
+        try {
+            const response = await axios.get(`${API_URL}/ingredients/${id}/history`);
+            setHistory(response.data);
+        } catch (error) {
+            console.error("Error fetching history:", error);
         }
     };
 
@@ -93,6 +109,8 @@ export default function IngredientsPage() {
             tax_rate: 8
         });
         setEditingId(null);
+        setHistory([]);
+        setShowHistory(false);
     };
 
     const handleEdit = (ing: Ingredient) => {
@@ -106,6 +124,7 @@ export default function IngredientsPage() {
             tax_type: ing.tax_type || 'inclusive',
             tax_rate: (ing.tax_rate || 0.08) * 100, // Convert to percentage
         });
+        fetchHistory(ing.id);
         setIsFormOpen(true);
     };
 
@@ -191,121 +210,157 @@ export default function IngredientsPage() {
                         style={{
                             backgroundColor: 'white',
                             width: '100%',
+                            maxHeight: '90vh',
                             borderTopLeftRadius: '1.5rem',
                             borderTopRightRadius: '1.5rem',
                             padding: '1.5rem',
-                            animation: 'slideUp 0.3s ease-out'
+                            animation: 'slideUp 0.3s ease-out',
+                            display: 'flex',
+                            flexDirection: 'column'
                         }}
                     >
-                        <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>
-                            {editingId ? '材料を編集' : '新しい材料を追加'}
-                        </h2>
-                        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <div>
-                                <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>材料名</label>
-                                <input
-                                    type="text"
-                                    required
-                                    placeholder="例: 強力粉"
-                                    className="input-field"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                />
-                            </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                            <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>
+                                {editingId ? '材料を編集' : '新しい材料を追加'}
+                            </h2>
+                            {editingId && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowHistory(!showHistory)}
+                                    style={{ fontSize: '0.85rem', color: 'var(--accent-color)', background: 'none', border: 'none', textDecoration: 'underline' }}
+                                >
+                                    {showHistory ? '入力を表示' : '変更履歴'}
+                                </button>
+                            )}
+                        </div>
 
-                            <div>
-                                <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>更新日</label>
-                                <input
-                                    type="date"
-                                    required
-                                    className="input-field"
-                                    value={formData.updated_at}
-                                    onChange={(e) => setFormData({ ...formData, updated_at: e.target.value })}
-                                />
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>価格 (円)</label>
-                                    <input
-                                        type="number"
-                                        required
-                                        placeholder="例: 300"
-                                        className="input-field"
-                                        value={formData.price}
-                                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                                    />
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>内容量</label>
-                                    <div style={{ display: 'flex' }}>
-                                        <input
-                                            type="number"
-                                            required
-                                            placeholder="1000"
-                                            className="input-field"
-                                            style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
-                                            value={formData.amount}
-                                            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                                        />
-                                        <select
-                                            className="input-field"
-                                            style={{ width: 'auto', borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderLeft: 'none', backgroundColor: '#f3f4f6' }}
-                                            value={formData.unit}
-                                            onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                                        >
-                                            <option value="g">g</option>
-                                            <option value="ml">ml</option>
-                                            <option value="pc">個</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Tax Settings */}
-                            <div style={{ backgroundColor: '#f9fafb', padding: '1rem', borderRadius: '0.5rem' }}>
-                                <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>税金設定</label>
-                                <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem' }}>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
-                                        <input
-                                            type="radio"
-                                            name="tax_type"
-                                            value="inclusive"
-                                            checked={formData.tax_type === 'inclusive'}
-                                            onChange={(e) => setFormData({ ...formData, tax_type: e.target.value })}
-                                        />
-                                        税込
-                                    </label>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
-                                        <input
-                                            type="radio"
-                                            name="tax_type"
-                                            value="exclusive"
-                                            checked={formData.tax_type === 'exclusive'}
-                                            onChange={(e) => setFormData({ ...formData, tax_type: e.target.value })}
-                                        />
-                                        税抜
-                                    </label>
-                                </div>
-
-                                {formData.tax_type === 'exclusive' && (
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>税率 (%)</label>
-                                        <input
-                                            type="number"
-                                            placeholder="8"
-                                            className="input-field"
-                                            value={formData.tax_rate}
-                                            onChange={(e) => setFormData({ ...formData, tax_rate: parseFloat(e.target.value) })}
-                                        />
+                        {showHistory ? (
+                            <div style={{ overflowY: 'auto', flex: 1 }}>
+                                {history.length === 0 ? (
+                                    <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '1rem' }}>変更履歴はありません</p>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                        {history.map((h) => (
+                                            <div key={h.id} style={{ padding: '0.75rem', backgroundColor: '#f9fafb', borderRadius: '0.5rem', fontSize: '0.85rem' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                                                    <span style={{ fontWeight: 'bold' }}>{h.changed_at.replace('T', ' ').substring(0, 16)}</span>
+                                                    <span style={{ color: 'var(--text-secondary)' }}>更新日: {h.updated_at || '---'}</span>
+                                                </div>
+                                                <div>¥{h.price} / {h.amount}{h.unit}</div>
+                                                <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>{h.name} ({h.tax_type === 'exclusive' ? '税抜' : '税込'} {Math.round((h.tax_rate || 0) * 100)}%)</div>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
                             </div>
+                        ) : (
+                            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', overflowY: 'auto' }}>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>材料名</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="例: 強力粉"
+                                        className="input-field"
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    />
+                                </div>
 
-                            <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }}>
-                                {editingId ? '更新する' : '追加する'}
-                            </button>
-                        </form>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>更新日</label>
+                                    <input
+                                        type="date"
+                                        required
+                                        className="input-field"
+                                        value={formData.updated_at}
+                                        onChange={(e) => setFormData({ ...formData, updated_at: e.target.value })}
+                                    />
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>価格 (円)</label>
+                                        <input
+                                            type="number"
+                                            required
+                                            placeholder="例: 300"
+                                            className="input-field"
+                                            value={formData.price}
+                                            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>内容量</label>
+                                        <div style={{ display: 'flex' }}>
+                                            <input
+                                                type="number"
+                                                required
+                                                placeholder="1000"
+                                                className="input-field"
+                                                style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
+                                                value={formData.amount}
+                                                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                                            />
+                                            <select
+                                                className="input-field"
+                                                style={{ width: 'auto', borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderLeft: 'none', backgroundColor: '#f3f4f6' }}
+                                                value={formData.unit}
+                                                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                                            >
+                                                <option value="g">g</option>
+                                                <option value="ml">ml</option>
+                                                <option value="pc">個</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Tax Settings */}
+                                <div style={{ backgroundColor: '#f9fafb', padding: '1rem', borderRadius: '0.5rem' }}>
+                                    <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>税金設定</label>
+                                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+                                            <input
+                                                type="radio"
+                                                name="tax_type"
+                                                value="inclusive"
+                                                checked={formData.tax_type === 'inclusive'}
+                                                onChange={(e) => setFormData({ ...formData, tax_type: e.target.value })}
+                                            />
+                                            税込
+                                        </label>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+                                            <input
+                                                type="radio"
+                                                name="tax_type"
+                                                value="exclusive"
+                                                checked={formData.tax_type === 'exclusive'}
+                                                onChange={(e) => setFormData({ ...formData, tax_type: e.target.value })}
+                                            />
+                                            税抜
+                                        </label>
+                                    </div>
+
+                                    {formData.tax_type === 'exclusive' && (
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>税率 (%)</label>
+                                            <input
+                                                type="number"
+                                                placeholder="8"
+                                                className="input-field"
+                                                value={formData.tax_rate}
+                                                onChange={(e) => setFormData({ ...formData, tax_rate: parseFloat(e.target.value) })}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+
+                                <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }}>
+                                    {editingId ? '更新する' : '追加する'}
+                                </button>
+                            </form>
+                        )}
                     </div>
                 </div>
             )}

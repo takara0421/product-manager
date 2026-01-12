@@ -58,7 +58,7 @@ export default function RecipesPage() {
                                 原価率: {recipe.selling_price > 0 ? ((recipe.total_cost / recipe.selling_price) * 100).toFixed(1) : '---'}%
                             </div>
                             <Link
-                                href={`#`}
+                                href={`/recipes/${recipe.id}`}
                                 style={{ fontSize: '0.7rem', color: '#3b82f6', textDecoration: 'none' }}
                             >
                                 詳細 &rarr;

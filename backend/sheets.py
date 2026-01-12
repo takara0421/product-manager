@@ -67,6 +67,9 @@ class SheetsCRUD:
             # Updated to include new columns
             self.ing_ws = self._get_or_create_worksheet("ingredients", ["id", "name", "price", "amount", "unit", "updated_at", "tax_type", "tax_rate"])
             self.recipe_item_ws = self._get_or_create_worksheet("recipe_items", ["id", "recipe_id", "ingredient_id", "amount", "section"])
+            # History Worksheets
+            self.ing_history_ws = self._get_or_create_worksheet("ingredients_history", ["id", "ingredient_id", "name", "price", "amount", "unit", "updated_at", "tax_type", "tax_rate", "changed_at"])
+            self.recipe_history_ws = self._get_or_create_worksheet("recipes_history", ["id", "recipe_id", "name", "description", "selling_price", "updated_at", "items_snapshot", "total_cost", "changed_at"])
 
     def _get_or_create_worksheet(self, title, headers):
         try:
@@ -125,11 +128,47 @@ class SheetsCRUD:
             return None
             
         row_num = cell.row
-        # Update columns B to H (2 to 8)
+        
+        # 1. Save current state to history BEFORE update
+        current_values = self.ing_ws.row_values(row_num)
+        # current_values matches columns: id, name, price, amount, unit, updated_at, tax_type, tax_rate
+        # We need to map this to history schema.
+        # Quick dict creation from headers (known order)
+        headers = ["id", "name", "price", "amount", "unit", "updated_at", "tax_type", "tax_rate"]
+        current_data = dict(zip(headers, current_values))
+        
+        history_id = self._get_next_id(self.ing_history_ws)
+        import datetime
+        now = datetime.datetime.now().isoformat()
+        
+        history_row = [
+            history_id,
+            ingredient_id,
+            current_data.get('name'),
+            current_data.get('price'),
+            current_data.get('amount'),
+            current_data.get('unit'),
+            current_data.get('updated_at'),
+            current_data.get('tax_type'),
+            current_data.get('tax_rate'),
+            now # changed_at
+        ]
+        self.ing_history_ws.append_row(history_row)
+
+        # 2. Update columns B to H (2 to 8)
         # name, price, amount, unit, updated_at, tax_type, tax_rate
         self.ing_ws.update(range_name=f'B{row_num}:H{row_num}', values=[[ing.name, ing.price, ing.amount, ing.unit, ing.updated_at, ing.tax_type, ing.tax_rate]])
         
         return schemas.Ingredient(id=ingredient_id, **ing.dict())
+
+    def get_ingredient_history(self, ingredient_id: int):
+        if not self.client: return []
+        records = self.ing_history_ws.get_all_records()
+        # Filter by ingredient_id
+        history = [r for r in records if str(r['ingredient_id']) == str(ingredient_id)]
+        # Sort by changed_at desc
+        history.sort(key=lambda x: x['changed_at'], reverse=True)
+        return [schemas.IngredientHistory(**r) for r in history]
 
     # Recipes
     def get_recipes(self):
@@ -222,6 +261,98 @@ class SheetsCRUD:
             if r.id == recipe_id:
                 return r
         return None
+
+    def update_recipe(self, recipe_id: int, recipe: schemas.RecipeCreate):
+        if not self.client: raise Exception("DB not connected")
+        
+        # 1. Get current recipe state for history
+        current_recipe = self.get_recipe(recipe_id)
+        if not current_recipe:
+            return None
+
+        # 2. Save to history
+        history_id = self._get_next_id(self.recipe_history_ws)
+        import datetime
+        now = datetime.datetime.now().isoformat()
+        
+        # Serialize items
+        import json
+        # Convert items to simple dict list for JSON storage
+        items_list = [item.dict() for item in current_recipe.items]
+        items_json = json.dumps(items_list, default=str)
+
+        history_row = [
+            history_id,
+            recipe_id,
+            current_recipe.name,
+            current_recipe.description,
+            current_recipe.selling_price,
+            current_recipe.updated_at,
+            items_json,
+            current_recipe.total_cost,
+            now
+        ]
+        self.recipe_history_ws.append_row(history_row)
+        
+        # 3. Update Recipe Row
+        try:
+            cell = self.recipe_ws.find(str(recipe_id), in_column=1)
+        except gspread.exceptions.CellNotFound:
+            return None
+        
+        row_num = cell.row
+        # Update basic info: name, description, selling_price, updated_at
+        self.recipe_ws.update(range_name=f'B{row_num}:E{row_num}', values=[[recipe.name, recipe.description, recipe.selling_price, recipe.updated_at]])
+        
+        # 4. Update Recipe Items
+        # Strategy: Delete old items for this recipe and create new ones.
+        # This is inefficient for sheets but simplest to implement without complex diffing.
+        
+        # Find all items with this recipe_id
+        # We need to find rows where col 2 (recipe_id) == recipe_id
+        # "Batch delete" or "Overwrite"
+        # Since we don't have good batch delete in gspread without row indices, let's try:
+        # Get all records, filter out this recipe's items, then clear sheet and write back? TOO RISKY/SLOW.
+        # Better: Just append new items and ignore old/orphaned ones in `get_recipes`? 
+        # No, `get_recipes` fetches ALL. We must clean up.
+        
+        # Alternative: Re-implement `get_recipes` to filter out deleted? No field for that.
+        
+        # Let's do: Find keys of items to delete.
+        all_items = self.recipe_item_ws.get_all_records()
+        rows_to_delete = []
+        # get_all_records returns dict list, we need row numbers. 
+        # `findall` might work but only for specific value.
+        
+        cell_list = self.recipe_item_ws.findall(str(recipe_id), in_column=2)
+        # Delete from bottom to top to preserve indices
+        rows_to_delete = sorted([c.row for c in cell_list], reverse=True)
+        
+        for r_idx in rows_to_delete:
+            self.recipe_item_ws.delete_rows(r_idx)
+            
+        # Add new items
+        for item in recipe.items:
+            new_ri_id = self._get_next_id(self.recipe_item_ws)
+            self.recipe_item_ws.append_row([
+                new_ri_id,
+                recipe_id,
+                item.ingredient_id,
+                item.amount,
+                item.section
+            ])
+            
+        return self.get_recipe(recipe_id)
+
+    def get_recipe_history(self, recipe_id: int):
+        if not self.client: return []
+        records = self.recipe_history_ws.get_all_records()
+        history = [r for r in records if str(r['recipe_id']) == str(recipe_id)]
+        history.sort(key=lambda x: x['changed_at'], reverse=True)
+        
+        # Note: items_snapshot is a JSON string, schema expects it as such.
+        # If we wanted to hydrate objects we could, but schema defines it as str for now.
+        return [schemas.RecipeHistory(**r) for r in history]
 
 # Singleton instance
 db = SheetsCRUD()

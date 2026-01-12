@@ -52,3 +52,20 @@ def read_recipe(recipe_id: int):
     if recipe is None:
         raise HTTPException(status_code=404, detail="Recipe not found")
     return recipe
+
+@app.put("/recipes/{recipe_id}", response_model=schemas.Recipe)
+def update_recipe(recipe_id: int, recipe: schemas.RecipeCreate):
+    updated_recipe = sheets.db.update_recipe(recipe_id, recipe)
+    if updated_recipe is None:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    return updated_recipe
+
+# History Endpoints
+
+@app.get("/ingredients/{ingredient_id}/history", response_model=List[schemas.IngredientHistory])
+def read_ingredient_history(ingredient_id: int):
+    return sheets.db.get_ingredient_history(ingredient_id)
+
+@app.get("/recipes/{recipe_id}/history", response_model=List[schemas.RecipeHistory])
+def read_recipe_history(recipe_id: int):
+    return sheets.db.get_recipe_history(recipe_id)

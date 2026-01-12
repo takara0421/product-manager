@@ -54,3 +54,22 @@ class Recipe(RecipeBase):
 
     class Config:
         orm_mode = True
+
+# History Schemas
+class IngredientHistory(IngredientBase):
+    id: int # History ID (row number)
+    ingredient_id: int
+    changed_at: str # ISO date string of when the change happened
+
+    class Config:
+        orm_mode = True
+
+class RecipeHistory(RecipeBase):
+    id: int
+    recipe_id: int
+    items_snapshot: str # JSON string of items at that time
+    total_cost: float
+    changed_at: str
+
+    class Config:
+        orm_mode = True
