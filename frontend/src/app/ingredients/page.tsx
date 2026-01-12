@@ -78,6 +78,7 @@ export default function IngredientsPage() {
             setIsFormOpen(false);
         } catch (error) {
             console.error("Error saving ingredient:", error);
+            alert("エラーが発生しました。入力を確認してください。");
         }
     };
 

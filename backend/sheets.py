@@ -102,7 +102,6 @@ class SheetsCRUD:
         new_id = self._get_next_id(self.ing_ws)
         row = [new_id, ing.name, ing.price, ing.amount, ing.unit, ing.updated_at, ing.tax_type, ing.tax_rate]
         self.ing_ws.append_row(row)
-        self.ing_ws.append_row(row)
         return schemas.Ingredient(id=new_id, **ing.dict())
 
     def update_ingredient(self, ingredient_id: int, ing: schemas.IngredientCreate):
@@ -143,7 +142,6 @@ class SheetsCRUD:
             
             for ri in recipe_items:
                 ing_data = ing_map.get(ri['ingredient_id'])
-                if ing_data:
                 if ing_data:
                     # Calculate cost with tax logic
                     raw_price = float(ing_data['price'])
