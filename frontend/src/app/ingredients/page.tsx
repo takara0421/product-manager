@@ -134,7 +134,8 @@ export default function IngredientsPage() {
                         </div>
                         <div style={{ textAlign: 'right' }}>
                             <div style={{ color: 'var(--success-color)', fontWeight: 'bold', fontSize: '1.1rem' }}>
-                                ¥{((ing.tax_type === 'exclusive' ? (ing.price * (1 + (ing.tax_rate || 0.08))) : ing.price) / ing.amount).toFixed(2)}
+                                ¥{((ing.tax_type === 'exclusive' ? (ing.price * (1 + (ing.tax_rate ?? 0.08))) : ing.price) / ing.amount).toFixed(2)}
+                                <span style={{ fontSize: '0.7rem', fontWeight: 'normal', marginLeft: '0.2rem' }}>(税込)</span>
                             </div>
                             <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>/{ing.unit}あたり</div>
                             <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: '0.2rem' }}>

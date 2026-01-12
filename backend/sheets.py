@@ -157,7 +157,9 @@ class SheetsCRUD:
                     # Calculate cost with tax logic
                     raw_price = float(ing_data['price'])
                     tax_type = ing_data.get('tax_type', 'inclusive')
-                    tax_rate = float(ing_data.get('tax_rate', 0.08))
+                    # If tax_rate is missing or empty string, default to 0.08
+                    tax_raw = ing_data.get('tax_rate')
+                    tax_rate = float(tax_raw) if (tax_raw is not None and tax_raw != '') else 0.08
 
                     if tax_type == 'exclusive':
                         price_with_tax = raw_price * (1 + tax_rate)
