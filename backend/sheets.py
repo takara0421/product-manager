@@ -92,10 +92,21 @@ class SheetsCRUD:
         return len(worksheet.get_all_values()) 
 
     # Ingredients
+    # Ingredients
+    def _clean_ingredient_record(self, r):
+        """Handle empty strings for new columns to prevent parsing errors"""
+        if r.get('tax_rate') == '':
+            r['tax_rate'] = 0.08
+        if r.get('tax_type') == '':
+            r['tax_type'] = 'inclusive'
+        if r.get('updated_at') == '':
+            r['updated_at'] = None
+        return r
+
     def get_ingredients(self):
         if not self.client: return []
         records = self.ing_ws.get_all_records()
-        return [schemas.Ingredient(**r) for r in records]
+        return [schemas.Ingredient(**self._clean_ingredient_record(r)) for r in records]
 
     def create_ingredient(self, ing: schemas.IngredientCreate):
         if not self.client: raise Exception("DB not connected")
@@ -128,8 +139,8 @@ class SheetsCRUD:
         i_records = self.ing_ws.get_all_records()
         ri_records = self.recipe_item_ws.get_all_records()
         
-        # Build lookup dicts
-        ing_map = {r['id']: r for r in i_records}
+        # Build lookup dicts (Clean ingredient records first)
+        ing_map = {r['id']: self._clean_ingredient_record(r) for r in i_records}
         
         results = []
         for r in r_records:
