@@ -42,6 +42,7 @@ class RecipeBase(BaseModel):
     name: str
     description: Optional[str] = None
     selling_price: Optional[float] = 0.0
+    updated_at: Optional[str] = None
 
 class RecipeCreate(RecipeBase):
     items: List[RecipeItemCreate] = []

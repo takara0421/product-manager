@@ -10,6 +10,7 @@ type Recipe = {
     name: string;
     total_cost: number;
     selling_price: number;
+    updated_at: string;
 };
 
 export default function RecipesPage() {
@@ -43,6 +44,9 @@ export default function RecipesPage() {
                             <div style={{ fontWeight: 'bold', fontSize: '1rem', marginBottom: '0.25rem' }}>{recipe.name}</div>
                             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                                 販売価格: ¥{recipe.selling_price?.toLocaleString() || '---'}
+                            </div>
+                            <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: '0.2rem' }}>
+                                更新: {recipe.updated_at || '---'}
                             </div>
                         </div>
 

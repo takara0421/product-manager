@@ -63,7 +63,7 @@ class SheetsCRUD:
         self.client = get_db_connection()
         if self.client:
             self.sh = get_spreadsheet(self.client)
-            self.recipe_ws = self._get_or_create_worksheet("recipes", ["id", "name", "description", "selling_price"])
+            self.recipe_ws = self._get_or_create_worksheet("recipes", ["id", "name", "description", "selling_price", "updated_at"])
             # Updated to include new columns
             self.ing_ws = self._get_or_create_worksheet("ingredients", ["id", "name", "price", "amount", "unit", "updated_at", "tax_type", "tax_rate"])
             self.recipe_item_ws = self._get_or_create_worksheet("recipe_items", ["id", "recipe_id", "ingredient_id", "amount", "section"])
@@ -185,6 +185,7 @@ class SheetsCRUD:
                 name=r['name'],
                 description=r.get('description'),
                 selling_price=float(r.get('selling_price', 0) or 0),
+                updated_at=r.get('updated_at'),
                 items=items,
                 total_cost=total_cost
             ))
@@ -195,7 +196,7 @@ class SheetsCRUD:
         
         # 1. Create Recipe
         new_r_id = self._get_next_id(self.recipe_ws)
-        self.recipe_ws.append_row([new_r_id, recipe.name, recipe.description, recipe.selling_price])
+        self.recipe_ws.append_row([new_r_id, recipe.name, recipe.description, recipe.selling_price, recipe.updated_at])
         
         # 2. Create Recipe Items
         created_items = []

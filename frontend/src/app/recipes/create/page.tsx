@@ -28,6 +28,7 @@ export default function CreateRecipePage() {
     const [ingredients, setIngredients] = useState<Ingredient[]>([]);
     const [recipeName, setRecipeName] = useState("");
     const [sellingPrice, setSellingPrice] = useState("");
+    const [updatedAt, setUpdatedAt] = useState(new Date().toISOString().split('T')[0]);
     const [items, setItems] = useState<RecipeItemInput[]>([]);
 
     // Modal state
@@ -88,6 +89,7 @@ export default function CreateRecipePage() {
             await axios.post(`${API_URL}/recipes/`, {
                 name: recipeName,
                 selling_price: parseFloat(sellingPrice || "0"),
+                updated_at: updatedAt,
                 items: items.map(i => ({
                     ingredient_id: i.ingredient_id,
                     amount: i.amount,
@@ -191,17 +193,29 @@ export default function CreateRecipePage() {
                     value={recipeName}
                     onChange={(e) => setRecipeName(e.target.value)}
                 />
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>販売予定価格:</label>
-                    <input
-                        type="number"
-                        className="input-field"
-                        style={{ border: 'none', borderBottom: '1px solid #eee', borderRadius: 0, paddingLeft: 0, width: '100px' }}
-                        placeholder="0"
-                        value={sellingPrice}
-                        onChange={(e) => setSellingPrice(e.target.value)}
-                    />
-                    <span style={{ fontSize: '0.9rem' }}>円</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>販売価格:</label>
+                        <input
+                            type="number"
+                            className="input-field"
+                            style={{ border: 'none', borderBottom: '1px solid #eee', borderRadius: 0, paddingLeft: 0, width: '80px' }}
+                            placeholder="0"
+                            value={sellingPrice}
+                            onChange={(e) => setSellingPrice(e.target.value)}
+                        />
+                        <span style={{ fontSize: '0.8rem' }}>円</span>
+                    </div>
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>更新日:</label>
+                        <input
+                            type="date"
+                            className="input-field"
+                            style={{ border: 'none', borderBottom: '1px solid #eee', borderRadius: 0, paddingLeft: 0, fontSize: '0.8rem' }}
+                            value={updatedAt}
+                            onChange={(e) => setUpdatedAt(e.target.value)}
+                        />
+                    </div>
                 </div>
             </div>
 
