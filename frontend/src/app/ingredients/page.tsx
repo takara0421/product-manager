@@ -36,17 +36,21 @@ export default function IngredientsPage() {
     const [editingId, setEditingId] = useState<number | null>(null);
     const [history, setHistory] = useState<IngredientHistory[]>([]);
     const [showHistory, setShowHistory] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         fetchIngredients();
     }, []);
 
     const fetchIngredients = async () => {
+        setIsLoading(true);
         try {
             const response = await axios.get(`${API_URL}/ingredients/`);
             setIngredients(response.data);
         } catch (error) {
             console.error("Error fetching ingredients:", error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -138,35 +142,43 @@ export default function IngredientsPage() {
 
             {/* Ingredient Cards (Mobile Friendly) */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {ingredients.map((ing) => (
-                    <div
-                        key={ing.id}
-                        className="card"
-                        style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
-                        onClick={() => handleEdit(ing)}
-                    >
-                        <div>
-                            <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>{ing.name}</div>
-                            <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-                                {ing.amount}{ing.unit} で ¥{ing.price}
-                            </div>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                            <div style={{ color: 'var(--success-color)', fontWeight: 'bold', fontSize: '1.1rem' }}>
-                                ¥{((ing.tax_type === 'exclusive' ? (ing.price * (1 + (ing.tax_rate ?? 0.08))) : ing.price) / ing.amount).toFixed(2)}
-                                <span style={{ fontSize: '0.7rem', fontWeight: 'normal', marginLeft: '0.2rem' }}>(税込)</span>
-                            </div>
-                            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>/{ing.unit}あたり</div>
-                            <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: '0.2rem' }}>
-                                更新: {ing.updated_at || '---'} | {ing.tax_type === 'exclusive' ? '税抜' : '税込'}
-                            </div>
-                        </div>
+                {isLoading ? (
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
+                        <div className="spinner"></div>
                     </div>
-                ))}
-                {ingredients.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                        まだ材料がありません。<br />下のボタンから追加してください。
-                    </div>
+                ) : (
+                    <>
+                        {ingredients.map((ing) => (
+                            <div
+                                key={ing.id}
+                                className="card"
+                                style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+                                onClick={() => handleEdit(ing)}
+                            >
+                                <div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>{ing.name}</div>
+                                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                                        {ing.amount}{ing.unit} で ¥{ing.price}
+                                    </div>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                    <div style={{ color: 'var(--success-color)', fontWeight: 'bold', fontSize: '1.1rem' }}>
+                                        ¥{((ing.tax_type === 'exclusive' ? (ing.price * (1 + (ing.tax_rate ?? 0.08))) : ing.price) / ing.amount).toFixed(2)}
+                                        <span style={{ fontSize: '0.7rem', fontWeight: 'normal', marginLeft: '0.2rem' }}>(税込)</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>/{ing.unit}あたり</div>
+                                    <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: '0.2rem' }}>
+                                        更新: {ing.updated_at || '---'} | {ing.tax_type === 'exclusive' ? '税抜' : '税込'}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        {ingredients.length === 0 && (
+                            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                                まだ材料がありません。<br />下のボタンから追加してください。
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
 

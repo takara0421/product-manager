@@ -70,6 +70,9 @@ class SheetsCRUD:
             # History Worksheets
             self.ing_history_ws = self._get_or_create_worksheet("ingredients_history", ["id", "ingredient_id", "name", "price", "amount", "unit", "updated_at", "tax_type", "tax_rate", "changed_at"])
             self.recipe_history_ws = self._get_or_create_worksheet("recipes_history", ["id", "recipe_id", "name", "description", "selling_price", "updated_at", "items_snapshot", "total_cost", "changed_at"])
+            
+            # Simple in-memory cache
+            self.cache = {}
 
     def _get_or_create_worksheet(self, title, headers):
         try:
@@ -108,14 +111,28 @@ class SheetsCRUD:
 
     def get_ingredients(self):
         if not self.client: return []
+        
+        # Check cache
+        if 'ingredients' in self.cache:
+            print("Serving ingredients from cache")
+            return self.cache['ingredients']
+            
         records = self.ing_ws.get_all_records()
-        return [schemas.Ingredient(**self._clean_ingredient_record(r)) for r in records]
+        result = [schemas.Ingredient(**self._clean_ingredient_record(r)) for r in records]
+        
+        # Update cache
+        self.cache['ingredients'] = result
+        return result
 
     def create_ingredient(self, ing: schemas.IngredientCreate):
         if not self.client: raise Exception("DB not connected")
         new_id = self._get_next_id(self.ing_ws)
         row = [new_id, ing.name, ing.price, ing.amount, ing.unit, ing.updated_at, ing.tax_type, ing.tax_rate]
         self.ing_ws.append_row(row)
+        # Invalidate cache
+        if 'ingredients' in self.cache:
+            del self.cache['ingredients']
+            
         return schemas.Ingredient(id=new_id, **ing.dict())
 
     def update_ingredient(self, ingredient_id: int, ing: schemas.IngredientCreate):
@@ -158,7 +175,12 @@ class SheetsCRUD:
         # 2. Update columns B to H (2 to 8)
         # name, price, amount, unit, updated_at, tax_type, tax_rate
         self.ing_ws.update(range_name=f'B{row_num}:H{row_num}', values=[[ing.name, ing.price, ing.amount, ing.unit, ing.updated_at, ing.tax_type, ing.tax_rate]])
+
         
+        # Invalidate cache
+        if 'ingredients' in self.cache:
+            del self.cache['ingredients']
+
         return schemas.Ingredient(id=ingredient_id, **ing.dict())
 
     def get_ingredient_history(self, ingredient_id: int):
